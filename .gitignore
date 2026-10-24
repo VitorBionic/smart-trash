@@ -1,0 +1,19 @@
+# Firmware ESP-IDF
+smart_trash/build/
+smart_trash/managed_components/
+smart_trash/sdkconfig
+smart_trash/sdkconfig.old
+smart_trash/sdkconfig.*
+
+# Preservar configurações padrão versionáveis
+!smart_trash/sdkconfig.defaults
+
+# Frontend: dependências e artefatos, caso sejam adicionados
+smart-trash-dashboard/node_modules/
+smart-trash-dashboard/dist/
+
+# Editor e sistema
+.vscode/
+.idea/
+.DS_Store
+*.log

@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b1120">
+<title>Smart Trash · Monitoramento</title>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0b1120;--panel:#121c2d;--border:#29374e;--text:#eff5ff;--muted:#91a1b8;--green:#50e3a4;--yellow:#f5c96a;--red:#ff7582;--blue:#83aaff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 15% 0%,#192943 0,var(--bg) 48%);color:var(--text);font:14px system-ui,-apple-system,"Segoe UI",sans-serif}.wrap{max-width:1120px;margin:auto;padding:30px 20px 44px}
+header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:30px}.brand{display:flex;align-items:center;gap:13px}.logo{width:46px;height:46px;display:grid;place-items:center;background:var(--green);color:#092016;border-radius:14px;font-size:25px}.brand h1{font-size:27px;letter-spacing:-1px;margin:0}.brand h1 span{color:var(--green)}.sub{color:var(--muted);font-size:12px;margin:4px 0 0}
+.conn{display:flex;align-items:center;gap:9px;padding:10px 13px;border:1px solid var(--border);border-radius:999px;color:var(--muted);font-size:12px}.dot{width:8px;height:8px;border-radius:50%;background:#718096}.conn.online{color:var(--green);border-color:#285844}.conn.online .dot{background:var(--green)}.conn.error{color:var(--red);border-color:#63323d}.conn.error .dot{background:var(--red)}
+.eyebrow{font-size:10px;font-weight:800;letter-spacing:1.4px;color:var(--muted);text-transform:uppercase}.sectionhead{display:flex;justify-content:space-between;align-items:end;gap:12px;margin-bottom:15px}.sectionhead h2{margin:5px 0 0;font-size:19px}.muted{color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.card{background:linear-gradient(150deg,#151f31,#101827);border:1px solid var(--border);border-radius:19px;padding:21px;min-width:0}.trashhead{display:flex;justify-content:space-between;align-items:start;gap:12px}.name{font-size:17px;font-weight:800}.topic{font:11px ui-monospace,monospace;color:var(--muted);margin-top:5px;overflow-wrap:anywhere}.pill{padding:7px 10px;border:1px solid var(--border);border-radius:999px;font-size:10px;font-weight:800;white-space:nowrap;color:var(--muted)}.pill.good{color:var(--green);border-color:#285844;background:#123126}.pill.warn{color:var(--yellow);border-color:#68542a;background:#352b18}.pill.full{color:var(--red);border-color:#693441;background:#381d28}
+.main{display:grid;grid-template-columns:minmax(0,1fr) 104px;align-items:center;gap:12px;margin-top:25px}.percent{font-size:58px;line-height:1;font-weight:850;letter-spacing:-3px}.percent small{font-size:22px;color:var(--muted);letter-spacing:0}.progress{height:9px;background:#28354a;border-radius:20px;overflow:hidden;margin:19px 0 11px}.progress div{height:100%;width:0;background:var(--green);transition:width .4s}.progress div.warn{background:var(--yellow)}.progress div.full{background:var(--red)}.metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}.metric{background:#0c1423;border:1px solid #243148;border-radius:12px;padding:13px}.metric label{display:block;color:var(--muted);font-size:10px;font-weight:800;margin-bottom:7px}.metric strong{font-size:21px}.metric strong small{font-size:11px;color:var(--muted);font-weight:600}
+.bin{height:142px;width:83px;position:relative;margin:auto}.lid{position:absolute;top:3px;left:0;right:0;height:12px;border-radius:5px;background:#526781;border:1px solid #7386a0}.body{position:absolute;top:14px;bottom:0;left:7px;right:7px;border:2px solid #526781;border-radius:7px 7px 16px 16px;background:#1b2b40;overflow:hidden}.fill{position:absolute;bottom:0;left:0;right:0;height:0;background:linear-gradient(0deg,#249d76,#50e3a4);transition:height .4s}.fill.warn{background:linear-gradient(0deg,#bd8116,#f5c96a)}.fill.full{background:linear-gradient(0deg,#d83d58,#ff7582)}.binlabel{position:absolute;z-index:2;top:45%;left:0;right:0;text-align:center;font-size:9px;font-weight:800;overflow:hidden;text-overflow:ellipsis;padding:0 3px}
+.bottom{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:18px}.paneltitle{font-size:15px;font-weight:800;margin:0 0 16px}.events{display:grid;gap:0}.event{display:grid;grid-template-columns:7px minmax(0,1fr) auto;gap:10px;padding:12px 0;border-top:1px solid #263248}.event:first-child{border-top:0;padding-top:0}.event .dot{margin-top:5px;background:var(--green)}.event strong{font-size:12px}.event p{font-size:11px;color:var(--muted);margin:4px 0 0;overflow-wrap:anywhere}.event time{font:10px ui-monospace,monospace;color:var(--muted)}.empty{padding:26px 4px;color:var(--muted);font-size:12px;line-height:1.6}
+label{display:block;color:var(--muted);font-size:10px;font-weight:800;margin-bottom:7px}.field{margin-bottom:13px}input{width:100%;min-width:0;background:#0b1322;border:1px solid #34445e;border-radius:10px;padding:11px 12px;color:var(--text);font:12px ui-monospace,monospace;outline:none}input:focus{border-color:var(--blue)}.row{display:flex;gap:8px}.row input{flex:1}button{border:0;border-radius:10px;background:var(--green);color:#092016;font-weight:800;padding:0 15px;cursor:pointer;white-space:nowrap}button:disabled{opacity:.6;cursor:wait}.hint{font-size:11px;color:var(--muted);line-height:1.65;margin:8px 0 0}.footer{display:flex;justify-content:space-between;gap:10px;margin-top:23px;color:#718198;font-size:11px}.count{font:11px ui-monospace,monospace;color:var(--muted)}
+@media(max-width:760px){.wrap{padding:22px 14px 32px}header{align-items:flex-start;flex-direction:column}.grid,.bottom{grid-template-columns:1fr}.main{grid-template-columns:minmax(0,1fr) 90px}.percent{font-size:51px}.footer{flex-direction:column}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<header>
+ <div class="brand"><div class="logo">▤</div><div><h1>Smart Trash<span> .</span></h1><p class="sub">Painel de monitoramento de lixeiras IoT</p></div></div>
+ <div class="conn" id="conn"><span class="dot"></span><span id="connText">Desconectado do broker</span></div>
+</header>
+<div class="sectionhead"><div><div class="eyebrow">Visão geral</div><h2>Lixeiras detectadas</h2></div><div class="eyebrow" id="lastSeen">AGUARDANDO MENSAGENS</div></div>
+<div id="trashes" class="grid"><div class="card empty" id="emptyState">Nenhuma lixeira detectada ainda.<br>Quando uma mensagem MQTT válida chegar, ela aparecerá aqui automaticamente.</div></div>
+<div class="bottom">
+ <section class="card"><h2 class="paneltitle">Atividade recente <span class="count" id="eventCount">0 eventos</span></h2><div id="events" class="events"><div class="empty">Aguardando mensagens do broker.</div></div></section>
+ <section class="card">
+  <h2 class="paneltitle">Conexão MQTT <span class="count">CONFIGURAÇÃO</span></h2>
+  <div class="field"><label for="broker">BROKER MQTT SOBRE WEBSOCKETS</label><div class="row"><input id="broker" value="ws://172.19.122.125:9001" spellcheck="false"><button id="connectBtn">Conectar</button></div></div>
+  <div class="field"><label for="topic">TÓPICO DE INSCRIÇÃO</label><input id="topic" value="trash/#" spellcheck="false"></div>
+  <p class="hint">O painel não pré-cadastra lixeiras. Ele cria um cartão quando recebe uma mensagem JSON com <code>trash_name</code>, <code>trash_size</code> e <code>distance_cm</code>. O ESP32 e o notebook precisam estar na mesma rede.</p>
+  <p class="hint">Para o navegador conectar, o Mosquitto precisa ter um listener WebSocket (por exemplo, porta 9001). A porta MQTT TCP 1883, sozinha, não funciona diretamente no navegador.</p>
+ </section>
+</div>
+<footer class="footer"><span>SMART TRASH · PROTÓTIPO ACADÊMICO</span><span id="footerState">Nenhuma mensagem recebida nesta sessão.</span></footer>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+let client = null;
+const trashes = new Map();
+let events = [];
+const MAX_EVENTS = 7;
+
+function setConnection(state, message) {
+  $("conn").className = "conn " + (state || "");
+  $("connText").textContent = message;
+}
+function logEvent(title, detail) {
+  events.unshift({title, detail, time:new Date()});
+  events = events.slice(0, MAX_EVENTS);
+  $("eventCount").textContent = `${events.length} evento${events.length === 1 ? "" : "s"}`;
+  const root = $("events"); root.replaceChildren();
+  for (const item of events) {
+    const row=document.createElement("div"); row.className="event";
+    const dot=document.createElement("span"); dot.className="dot";
+    const body=document.createElement("div");
+    const strong=document.createElement("strong"); strong.textContent=item.title;
+    const p=document.createElement("p"); p.textContent=item.detail;
+    body.append(strong,p);
+    const time=document.createElement("time"); time.textContent=item.time.toLocaleTimeString("pt-BR");
+    row.append(dot,body,time); root.append(row);
+  }
+}
+function cardFor(name) {
+  if (trashes.has(name)) return trashes.get(name);
+  $("emptyState")?.remove();
+  const card=document.createElement("article"); card.className="card";
+  const head=document.createElement("div"); head.className="trashhead";
+  const titleWrap=document.createElement("div");
+  const title=document.createElement("div"); title.className="name"; title.textContent=name;
+  const topic=document.createElement("div"); topic.className="topic";
+  const pill=document.createElement("span"); pill.className="pill"; pill.textContent="Aguardando dados";
+  titleWrap.append(title,topic); head.append(titleWrap,pill);
+  const main=document.createElement("div"); main.className="main";
+  const left=document.createElement("div");
+  const percent=document.createElement("div"); percent.className="percent"; percent.append(document.createTextNode("—"));
+  const pc=document.createElement("small"); pc.textContent="%"; percent.append(pc);
+  const caption=document.createElement("div"); caption.className="sub"; caption.textContent="do volume estimado preenchido";
+  const progress=document.createElement("div"); progress.className="progress";
+  const bar=document.createElement("div"); progress.append(bar);
+  const desc=document.createElement("p"); desc.className="hint"; desc.textContent="Aguardando leitura.";
+  left.append(percent,caption,progress,desc);
+  const bin=document.createElement("div"); bin.className="bin";
+  const lid=document.createElement("div"); lid.className="lid";
+  const body=document.createElement("div"); body.className="body";
+  const fill=document.createElement("div"); fill.className="fill";
+  const binLabel=document.createElement("div"); binLabel.className="binlabel"; binLabel.textContent=name;
+  body.append(fill,binLabel); bin.append(lid,body); main.append(left,bin);
+  const metrics=document.createElement("div"); metrics.className="metrics";
+  const distanceBox=document.createElement("div"); distanceBox.className="metric";
+  const dLabel=document.createElement("label"); dLabel.textContent="DISTÂNCIA ATUAL";
+  const dValue=document.createElement("strong"); dValue.append(document.createTextNode("— "));
+  const dUnit=document.createElement("small"); dUnit.textContent="cm"; dValue.append(dUnit);
+  distanceBox.append(dLabel,dValue);
+  const sizeBox=document.createElement("div"); sizeBox.className="metric";
+  const sLabel=document.createElement("label"); sLabel.textContent="ALTURA CONFIGURADA";
+  const sValue=document.createElement("strong"); sValue.append(document.createTextNode("— "));
+  const sUnit=document.createElement("small"); sUnit.textContent="cm"; sValue.append(sUnit);
+  sizeBox.append(sLabel,sValue); metrics.append(distanceBox,sizeBox);
+  card.append(head,main,metrics); $("trashes").prepend(card);
+  const refs={card,title,topic,pill,percent,bar,desc,fill,dValue,sValue};
+  trashes.set(name,refs); return refs;
+}
+function updateTrash(data, topic) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("Payload não é um objeto JSON");
+  const name=String(data.trash_name || "").trim();
+  const size=Number(data.trash_size), distance=Number(data.distance_cm);
+  if (!name) throw new Error("Campo trash_name ausente");
+  if (!Number.isFinite(size) || size<=0) throw new Error("trash_size inválido");
+  if (!Number.isFinite(distance) || distance<0) throw new Error("distance_cm inválido");
+  const fill=Math.max(0,Math.min(100,((size-distance)/size)*100));
+  const pct=Math.round(fill), level=fill>=85?"full":fill>=60?"warn":"good";
+  const refs=cardFor(name);
+  refs.title.textContent=name; refs.topic.textContent=topic;
+  refs.percent.firstChild.textContent=String(pct);
+  refs.bar.style.width=fill+"%"; refs.bar.className=level==="good"?"":level;
+  refs.fill.style.height=fill+"%"; refs.fill.className="fill "+(level==="good"?"":level);
+  refs.pill.className="pill "+(fill>=85?"full":fill>=60?"warn":"good");
+  refs.pill.textContent=fill>=85?"Quase cheia":fill>=60?"Atenção":"Nível normal";
+  refs.desc.textContent=fill>=85?"Nível alto: pode precisar de coleta.":fill>=60?"O nível está subindo; acompanhe a próxima leitura.":fill<=5?"Lixeira aparentemente vazia.":"Há espaço disponível na lixeira.";
+  refs.dValue.firstChild.textContent=String(distance)+" "; refs.sValue.firstChild.textContent=String(size)+" ";
+  const now=new Date();
+  $("lastSeen").textContent="ATUALIZADO ÀS "+now.toLocaleTimeString("pt-BR");
+  $("footerState").textContent="Última mensagem recebida às "+now.toLocaleTimeString("pt-BR")+".";
+  logEvent(name+" · "+pct+"% preenchida",distance+" cm · "+topic);
+}
+function disconnect() { if(client){try{client.end(true)}catch(e){} client=null;} }
+function connect() {
+  const url=$("broker").value.trim(), topic=$("topic").value.trim();
+  if(!url||!topic){setConnection("error","Informe URL e tópico");return;}
+  if(!window.mqtt){setConnection("error","MQTT.js indisponível");logEvent("Biblioteca MQTT.js indisponível","Confira a internet e recarregue a página.");return;}
+  disconnect(); setConnection("","Conectando…"); $("connectBtn").disabled=true;
+  try {
+    client=mqtt.connect(url,{clientId:"smart-trash-ui-"+Math.random().toString(16).slice(2,10),clean:true,connectTimeout:8000,reconnectPeriod:3000,keepalive:30});
+    client.on("connect",()=>{
+      setConnection("online","Broker conectado");$("connectBtn").disabled=false;$("connectBtn").textContent="Reconectar";
+      client.subscribe(topic,{qos:0},err=>err?logEvent("Falha na inscrição",err.message):logEvent("Inscrito no tópico",topic));
+    });
+    client.on("reconnect",()=>setConnection("","Reconectando…"));
+    client.on("offline",()=>setConnection("","Broker offline"));
+    client.on("close",()=>{if(client)setConnection("","Conexão fechada");$("connectBtn").disabled=false;});
+    client.on("error",err=>{setConnection("error","Falha na conexão");$("connectBtn").disabled=false;$("connectBtn").textContent="Tentar novamente";logEvent("Erro MQTT",err.message||"Falha de conexão");});
+    client.on("message",(receivedTopic,payload)=>{
+      try{updateTrash(JSON.parse(payload.toString()),receivedTopic)}
+      catch(err){logEvent("Mensagem ignorada",receivedTopic+" · "+err.message)}
+    });
+  } catch(err) {setConnection("error","Falha na conexão");$("connectBtn").disabled=false;logEvent("Erro MQTT",err.message);}
+}
+$("connectBtn").addEventListener("click",connect);
+connect();
+</script>
+</body>
+</html>
